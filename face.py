@@ -9,6 +9,8 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont
 import numpy as np
 import face_recognition
 import win32com.client
+import pystray
+from pystray import MenuItem as item
 
 class FaceDetectionApp:
     def __init__(self, root):
@@ -137,6 +139,21 @@ class FaceDetectionApp:
             self.cap = None
         self.panel.config(image='')
 
+    def minimize_to_tray(self):
+        self.root.withdraw()
+        image = Image.open("icon.png")  # Ensure you have an icon image file
+        menu = (item('Quit', self.quit_application), item('Show', self.show_window))
+        self.icon = pystray.Icon("face_detection", image, "Face Detection", menu)
+        self.icon.run()
+
+    def show_window(self, icon, item):
+        self.icon.stop()
+        self.root.after(0, self.root.deiconify)
+
+    def quit_application(self, icon, item):
+        self.icon.stop()
+        self.root.destroy()
+
     def setup_gui(self):
         self.root.title("Face Detection Camera Selector")
 
@@ -160,6 +177,9 @@ class FaceDetectionApp:
         stop_button = tk.Button(self.root, text="Stop", command=self.on_stop_button_click)
         stop_button.pack()
 
+        minimize_button = tk.Button(self.root, text="Minimize to Tray", command=self.minimize_to_tray)
+        minimize_button.pack()
+
         self.panel = tk.Label(self.root)
         self.panel.pack()
 
@@ -170,3 +190,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
