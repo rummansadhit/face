@@ -1,3 +1,4 @@
+import os
 import cv2
 import time
 import logging
@@ -25,8 +26,8 @@ class FaceDetectionApp:
 
     def setup_logging(self):
         logger = logging.getLogger('FaceDetectionBackgroundScript')
-        handler = logging.FileHandler('C:\\FaceDetectionBackgroundScript.log')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levellevel)s - %(message)s')
+        handler = logging.FileHandler('FaceDetectionBackgroundScript.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
@@ -35,7 +36,7 @@ class FaceDetectionApp:
     def lock_all_sessions(self):
         self.logger.info('Locking all sessions.')
         try:
-            script_path = "C:\\temp\\face\\lock_screen.ps1"
+            script_path = os.path.join(os.getcwd(), "lock_screen.ps1")
             subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_path])
             self.logger.info('Lock all sessions script executed successfully.')
         except Exception as e:
@@ -141,7 +142,7 @@ class FaceDetectionApp:
 
     def minimize_to_tray(self):
         self.root.withdraw()
-        image = Image.open("icon.png")  # Ensure you have an icon image file
+        image = Image.open(os.path.join(os.getcwd(), "icon.png"))  # Ensure you have an icon image file
         menu = (item('Quit', self.quit_application), item('Show', self.show_window))
         self.icon = pystray.Icon("face_detection", image, "Face Detection", menu)
         self.icon.run()
@@ -190,4 +191,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
