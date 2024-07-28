@@ -1,8 +1,9 @@
+import subprocess
+import sys
 import os
 import cv2
 import time
 import logging
-import subprocess
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
@@ -10,8 +11,21 @@ from PIL import Image, ImageTk, ImageDraw, ImageFont
 import numpy as np
 import face_recognition
 import win32com.client
-import pystray
 from pystray import MenuItem as item
+import pystray
+
+def resource_path(relative_path):
+    """ Get the absolute path to the resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+# Use the resource_path function to get the correct paths
+lock_screen_script = resource_path("lock_screen.ps1")
+icon_file = resource_path("icon.png")
 
 class FaceDetectionApp:
     def __init__(self, root):
@@ -36,8 +50,7 @@ class FaceDetectionApp:
     def lock_all_sessions(self):
         self.logger.info('Locking all sessions.')
         try:
-            script_path = os.path.join(os.getcwd(), "lock_screen.ps1")
-            subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script_path])
+            subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", lock_screen_script])
             self.logger.info('Lock all sessions script executed successfully.')
         except Exception as e:
             self.logger.error('Failed to execute lock all sessions script: %s', str(e))
@@ -90,8 +103,16 @@ class FaceDetectionApp:
             self.root.after(10, self.update_frame)
             return
 
+        # Ensure the image is in RGB format
+        if frame is None:
+            self.logger.error("Failed to capture image from camera.")
+            self.root.after(10, self.update_frame)
+            return
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
         # Use face_recognition to detect faces
-        rgb_frame = frame[:, :, ::-1]  # Convert BGR to RGB
+        rgb_frame = np.array(rgb_frame)  # Ensure the image is a numpy array
         face_locations = face_recognition.face_locations(rgb_frame)
 
         if len(face_locations) == 0:
@@ -101,12 +122,11 @@ class FaceDetectionApp:
             self.no_face_count = 0
             self.logger.info('Face detected.')
             # Draw "Face Detected" text on the frame
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(frame)
+            img = Image.fromarray(rgb_frame)
             draw = ImageDraw.Draw(img)
             font = ImageFont.truetype("arial.ttf", 32)  # Adjust the font size as needed
             draw.text((10, 10), "Face Detected", font=font, fill=(255, 0, 0))
-            frame = np.array(img)  # Convert back to OpenCV format
+            rgb_frame = np.array(img)  # Convert back to OpenCV format
 
         if self.no_face_count >= self.frames_to_lock:  # No face detected for a certain number of frames
             self.logger.info('No face detected for sufficient frames. Locking all sessions.')
@@ -114,8 +134,7 @@ class FaceDetectionApp:
             self.no_face_count = 0
 
         # Convert the frame to ImageTk format
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(frame)
+        img = Image.fromarray(rgb_frame)
         imgtk = ImageTk.PhotoImage(image=img)
 
         # Update the image panel
@@ -142,7 +161,7 @@ class FaceDetectionApp:
 
     def minimize_to_tray(self):
         self.root.withdraw()
-        image = Image.open(os.path.join(os.getcwd(), "icon.png"))  # Ensure you have an icon image file
+        image = Image.open(icon_file)  # Ensure you have an icon image file
         menu = (item('Quit', self.quit_application), item('Show', self.show_window))
         self.icon = pystray.Icon("face_detection", image, "Face Detection", menu)
         self.icon.run()
@@ -191,5 +210,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
